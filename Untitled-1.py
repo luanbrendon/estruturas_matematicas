@@ -24,7 +24,7 @@ def eliminacao_gaussiana(A, b):
     print('\nMatriz aumentada inicial:')
     print_matriz(M)
 
-    # Eliminação
+    # Eliminação por colunas
     for k in range(n):
         max_row = max(range(k, n), key=lambda i: abs(M[i][k]))
         print(f'Selecionando pivô na coluna {k}, linha {max_row}')
@@ -51,7 +51,16 @@ def eliminacao_gaussiana(A, b):
         raw = (M[i][n] - soma) / M[i][i]
         x[i] = round(raw, 6)
         print(f' x[{i}] = ({round(M[i][n],6)} - {round(soma,6)}) / {round(M[i][i],6)} = {x[i]}')
-    print('Solução final:', x)
+
+    # Impressão formatada da solução
+    print('\nSolução final:')
+    # Gera rótulos para as variáveis
+    if n == 3:
+        labels = ['x', 'y', 'z']
+    else:
+        labels = [f'x{i+1}' for i in range(n)]
+    for label, val in zip(labels, x):
+        print(f' {label} = {val}')
     return x
 
 
