@@ -1,3 +1,5 @@
+import sys
+
 def print_matriz(M):
     """Imprime a matriz aumentada M linha a linha, arredondando para 6 casas decimais."""
     for row in M:
@@ -19,7 +21,7 @@ def eliminacao_gaussiana(A, b):
     n = len(A)
     # Converte para float e cria matriz aumentada
     M = [[float(val) for val in row] + [float(b_i)] for row, b_i in zip(A, b)]
-    print('Matriz aumentada inicial:')
+    print('\nMatriz aumentada inicial:')
     print_matriz(M)
 
     # Eliminação
@@ -53,11 +55,46 @@ def eliminacao_gaussiana(A, b):
     return x
 
 
+def main():
+    """Interface de linha de comando para resolver sistemas lineares pelo método de Gauss."""
+    while True:
+        try:
+            n = int(input('Digite o número de equações (n): '))
+        except ValueError:
+            print('Valor inválido. Digite um inteiro.')
+            continue
+        
+        A = []
+        print(f'Informe os {n} coeficientes de cada linha, separados por espaço:')
+        for i in range(n):
+            while True:
+                linha = input(f'Linha {i+1}: ').strip().split()
+                if len(linha) != n:
+                    print(f'Precisam ser {n} valores. Tente novamente.')
+                    continue
+                try:
+                    A.append([float(x) for x in linha])
+                    break
+                except ValueError:
+                    print('Entradas inválidas. Digite números.')
+        
+        while True:
+            b_vals = input(f'Digite os {n} termos independentes (b), separados por espaço: ').strip().split()
+            if len(b_vals) != n:
+                print(f'Precisam ser {n} valores. Tente novamente.')
+                continue
+            try:
+                b = [float(x) for x in b_vals]
+                break
+            except ValueError:
+                print('Entradas inválidas. Digite números.')
+
+        eliminacao_gaussiana(A, b)
+
+        again = input('Deseja resolver outro sistema? (s/n): ').strip().lower()
+        if again != 's':
+            print('Encerrando.')
+            break
+
 if __name__ == '__main__':
-    A = [
-        [3, 2, -4],
-        [2, 3,  3],
-        [5, -3, 1]
-    ]
-    b = [3, 15, 14]
-    eliminacao_gaussiana(A, b)
+    main()
