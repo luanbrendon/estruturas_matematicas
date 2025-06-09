@@ -1,208 +1,180 @@
 import tkinter as tk
 from tkinter import messagebox
 
+# Cálculo do máximo divisor comum e conversão para fração
+
 def mdc(a, b):
     while b:
         a, b = b, a % b
     return a
 
+
 def decimal_para_fracao(valor, max_denominador=1000):
     negativo = valor < 0
     valor = abs(valor)
-
-    melhor_numerador = 0
-    melhor_denominador = 1
-    erro_min = float('inf')
-
-    for denominador in range(1, max_denominador + 1):
-        numerador = round(valor * denominador)
-        erro = abs(valor - (numerador / denominador))
+    melhor_numerador, melhor_denominador, erro_min = 0, 1, float('inf')
+    for d in range(1, max_denominador+1):
+        n = round(valor * d)
+        erro = abs(valor - n / d)
         if erro < erro_min:
             erro_min = erro
-            melhor_numerador = numerador
-            melhor_denominador = denominador
+            melhor_numerador, melhor_denominador = n, d
+    div = mdc(melhor_numerador, melhor_denominador)
+    num, den = melhor_numerador//div, melhor_denominador//div
+    if negativo: num *= -1
+    return f"{num}/{den}" if den != 1 else str(num)
 
-    divisor = mdc(melhor_numerador, melhor_denominador)
-    numerador = melhor_numerador // divisor
-    denominador = melhor_denominador // divisor
-
-    if negativo:
-        numerador *= -1
-
-    return f"{numerador}/{denominador}" if denominador != 1 else str(numerador)
+# Função de eliminação de Gauss
 
 def eliminacao_gauss(matriz, termos):
     n = len(matriz)
-    for i in range(n):
-        matriz[i].append(termos[i])
-
+    A = [row[:] + [termos[i]] for i, row in enumerate(matriz)]
+    # triangularização
     for k in range(n):
-        max_linha = max(range(k, n), key=lambda i: abs(matriz[i][k]))
-        if matriz[max_linha][k] == 0:
-            raise ValueError("Sistema sem solução única.")
-        matriz[k], matriz[max_linha] = matriz[max_linha], matriz[k]
+        maxr = max(range(k, n), key=lambda i: abs(A[i][k]))
+        A[k], A[maxr] = A[maxr], A[k]
+        for i in range(k+1, n):
+            f = A[i][k] / A[k][k]
+            for j in range(k, n+1):
+                A[i][j] -= f * A[k][j]
+    # retro-substituição
+    sol = [0]*n
+    for i in range(n-1, -1, -1):
+        soma = sum(A[i][j] * sol[j] for j in range(i+1, n))
+        sol[i] = (A[i][n] - soma) / A[i][i]
+    return sol
 
-        for i in range(k + 1, n):
-            fator = matriz[i][k] / matriz[k][k]
-            for j in range(k, n + 1):
-                matriz[i][j] -= fator * matriz[k][j]
-
-    solucao = [0] * n
-    for i in range(n - 1, -1, -1):
-        soma = sum(matriz[i][j] * solucao[j] for j in range(i + 1, n))
-        solucao[i] = (matriz[i][n] - soma) / matriz[i][i]
-    return solucao
-
+# Interface do app
 class App:
     def __init__(self, root):
         self.root = root
-        root.title("🔢 Solver de Sistema Linear")
-        root.geometry("950x650")
-        root.configure(bg="#f0f4f7")
+        root.title("🔢 Solver de Sistemas 3×3")
+        root.geometry("960x700")
+        root.configure(bg="#e0f7fa")  # azul claro
 
-        titulo = tk.Label(root, text="🎓 Resolver Sistema Linear", font=("Arial", 18, "bold"), bg="#f0f4f7", fg="#333")
-        titulo.pack(pady=15)
+        # Título
+        tk.Label(root, text="🎓 Elimin. de Gauss 3×3", font=("Arial",20,"bold"), bg="#e0f7fa", fg="#006064").pack(pady=10)
 
-        top_direita = tk.Frame(root, bg="#f0f4f7")
-        top_direita.place(relx=1.0, y=5, anchor="ne")
-        tk.Button(
-            top_direita,
-            text="Instruções",
-            font=("Arial", 10),
-            bg="#FFC107",
-            fg="black",
-            command=self.mostrar_instrucoes,
-            width=10,
-            height=1
-        ).pack(padx=5)
+        # Botão de instruções colorido
+        top = tk.Frame(root, bg="#e0f7fa")
+        top.place(relx=1.0, y=5, anchor="ne")
+        tk.Button(top, text="❔ Instruções", font=("Arial",10), bg="#ffca28", fg="#000",
+                  command=self.mostrar_instrucoes).pack(padx=5)
 
-        self.num_var = tk.StringVar(value="2")
-        vcmd = root.register(self.validar_entrada_variaveis)
+        # Seleção fixa para 3 variáveis
+        ctrl = tk.Frame(root, bg="#e0f7fa")
+        ctrl.pack(pady=5)
+        tk.Label(ctrl, text="Sistemas 3×3", font=("Arial",12), bg="#e0f7fa").pack(side=tk.LEFT, padx=5)
+        tk.Button(ctrl, text="Criar Entradas", font=("Arial",11), bg="#00796b", fg="white",
+                  command=self.criar_entradas).pack(side=tk.LEFT, padx=5)
 
-        container_topo = tk.Frame(root, bg="#f0f4f7")
-        container_topo.pack()
+        # Frame de entradas
+        self.frame = tk.Frame(root, bg="#e0f7fa")
+        self.frame.pack(pady=10)
+        # Botão calcular
+        tk.Button(root, text="✅ Calcular", font=("Arial",12,"bold"), bg="#0288d1", fg="white",
+                  command=self.calcular).pack(pady=5)
 
-        tk.Label(container_topo, text="Número de variáveis (até 10):", font=("Arial", 12), bg="#f0f4f7").pack(side=tk.LEFT, padx=5)
-
-        self.spin = tk.Spinbox(
-            container_topo,
-            from_=2,
-            to=10,
-            textvariable=self.num_var,
-            width=5,
-            font=("Arial", 12),
-            validate='key',
-            validatecommand=(vcmd, '%P'),
-            command=self.validar_variaveis
-        )
-        self.spin.pack(side=tk.LEFT)
-        self.spin.bind("<FocusOut>", lambda e: self.validar_variaveis())
-        self.spin.bind("<Return>", lambda e: self.validar_variaveis())
-
-        tk.Button(container_topo, text="➕ Criar Sistema", font=("Arial", 11), bg="#4CAF50", fg="white", command=self.criar_entradas).pack(side=tk.LEFT, padx=10)
-
-        self.entrada_frame = tk.Frame(root, bg="#f0f4f7")
-        self.entrada_frame.pack(pady=10)
-
-        tk.Button(root, text="✅ Calcular", font=("Arial", 12, "bold"), bg="#2196F3", fg="white", command=self.calcular).pack(pady=5)
-
-        self.resultado = tk.Label(root, text="", font=("Courier", 12), bg="#f0f4f7", fg="#000", justify="left")
-        self.resultado.pack(pady=10)
-
-    def validar_entrada_variaveis(self, novo_valor):
-        if novo_valor.isdigit():
-            v = int(novo_valor)
-            return 2 <= v <= 10
-        return False
-
-    def validar_variaveis(self):
-        try:
-            valor = int(self.num_var.get())
-            if valor > 10:
-                messagebox.showwarning("Limite excedido", "O número máximo de variáveis é 10.")
-                self.num_var.set("10")
-            elif valor < 2:
-                messagebox.showwarning("Valor mínimo", "O número mínimo de variáveis é 2.")
-                self.num_var.set("2")
-        except ValueError:
-            messagebox.showerror("Entrada inválida", "Digite um número inteiro entre 2 e 10.")
-            self.num_var.set("2")
-
-    def criar_entradas(self):
-        for widget in self.entrada_frame.winfo_children():
-            widget.destroy()
-
-        self.entradas = []
-        self.termos = []
-
-        n = int(self.num_var.get())
-        variaveis = ['x', 'y', 'z', 'w', 'v', 'u', 'a', 'b', 'c', 'd']
-
-        tk.Label(self.entrada_frame, text="", bg="#f0f4f7").grid(row=0, column=0, padx=5)
-        for j in range(n):
-            tk.Label(self.entrada_frame, text=variaveis[j], font=("Arial", 11, "bold"), bg="#f0f4f7").grid(row=0, column=j + 1)
-
-        for i in range(n):
-            linha = []
-            tk.Label(self.entrada_frame, text=f"Equação {i+1}", bg="#f0f4f7", font=("Arial", 10, "italic")).grid(row=i + 1, column=0, padx=5, pady=3, sticky="e")
-            for j in range(n):
-                e = tk.Entry(self.entrada_frame, width=5, font=("Arial", 11), justify="center", bg="#fff")
-                e.grid(row=i + 1, column=j + 1, padx=2, pady=2)
-                linha.append(e)
-            self.entradas.append(linha)
-
-            tk.Label(self.entrada_frame, text="=", font=("Arial", 12), bg="#f0f4f7").grid(row=i + 1, column=n + 1, padx=5)
-            termo = tk.Entry(self.entrada_frame, width=5, font=("Arial", 11), justify="center", bg="#fff")
-            termo.grid(row=i + 1, column=n + 2, padx=2)
-            self.termos.append(termo)
-
-    def calcular(self):
-        try:
-            matriz = [[float(c.get().replace(",", ".")) for c in linha] for linha in self.entradas]
-            termos = [float(t.get().replace(",", ".")) for t in self.termos]
-            solucao = eliminacao_gauss([linha[:] for linha in matriz], termos[:])
-            variaveis = ['x', 'y', 'z', 'w', 'v', 'u', 'a', 'b', 'c', 'd']
-
-            def formatar_numero(num):
-                return str(int(num)) if num == int(num) else str(num)
-
-            texto = "Equações Digitadas:\n"
-            for i in range(len(matriz)):
-                equacao = " + ".join(f"{formatar_numero(matriz[i][j])}{variaveis[j]}" for j in range(len(matriz[i])))
-                equacao = equacao.replace("+ -", "- ")
-                texto += f"{equacao} = {formatar_numero(termos[i])}\n"
-
-            texto += "\nSoluções:\n"
-            for i, val in enumerate(solucao):
-                fracao = decimal_para_fracao(val)
-                texto += f"{variaveis[i]} = {fracao}\n"
-
-            self.resultado.config(text=texto)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
+        # Resultado exibido em área de texto colorida
+        self.res = tk.Text(root, height=20, bg="#ffffff", fg="#004d40", font=("Courier",12))
+        self.res.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.res.config(state=tk.DISABLED)
 
     def mostrar_instrucoes(self):
-        janela = tk.Toplevel(self.root)
-        janela.title("📘 Instruções")
-        janela.configure(bg="#fff")
-        janela.geometry("500x350")
-        janela.resizable(False, False)
-
-        texto = (
-            "📘 COMO USAR O PROGRAMA:\n\n"
-            "(1) Escolha o número de variáveis (entre 2 e 10).\n"
-            "(2) Clique em 'Criar Sistema' para gerar os campos.\n"
-            "(3) Preencha os coeficientes e os termos independentes.\n"
-            "(4) Clique em 'Calcular' para ver o sistema resolvido.\n\n"
-            "🧠 O programa usa Eliminação de Gauss.\n"
-            "🧾 As equações e soluções aparecerão abaixo."
+        win = tk.Toplevel(self.root)
+        win.title("📘 Instruções")
+        win.geometry("500x350")
+        win.configure(bg="#fffde7")  # amarelo claro
+        steps = (
+            "🔶 Preencha o sistema 3×3 e clique em Calcular.\n"
+            "🔶 Primeiro: L2 = L2 - L1.\n"
+            "🔶 Segundo: L3 = L3 - 2·L1.\n"
+            "🔶 Terceiro: L3 = L2 + L3 (correção importante).\n"
+            "🔶 Em seguida: resolver z, depois y (substituindo z), e por fim x (substituindo y e z)."
         )
+        tk.Label(win, text=steps, bg="#fffde7", font=("Arial",12), justify="left").pack(padx=15, pady=15)
+        tk.Button(win, text="👍 Entendi", bg="#388e3c", fg="white", command=win.destroy).pack(pady=10)
 
-        label = tk.Label(janela, text=texto, font=("Arial", 14), bg="#fff", justify="left", wraplength=460)
-        label.pack(padx=20, pady=20)
-        tk.Button(janela, text="Fechar", command=janela.destroy, font=("Arial", 12), bg="#2196F3", fg="white").pack(pady=10)
+    def criar_entradas(self):
+        for w in self.frame.winfo_children(): w.destroy()
+        self.entries, self.termos = [], []
+        vars = ['x','y','z']
+        # Cabeçalhos coloridos
+        for j, v in enumerate(vars):
+            tk.Label(self.frame, text=v, font=("Arial",12,"bold"), bg="#e0f7fa").grid(row=0, column=j)
+        tk.Label(self.frame, text='=', font=("Arial",12,"bold"), bg="#e0f7fa").grid(row=0, column=3)
+        # Entradas para cada linha
+        for i in range(3):
+            row=[]
+            for j in range(3):
+                e=tk.Entry(self.frame, width=6, justify="center")
+                e.grid(row=i+1, column=j, padx=5, pady=5)
+                row.append(e)
+            self.entries.append(row)
+            t=tk.Entry(self.frame, width=6, justify="center")
+            t.grid(row=i+1, column=3, padx=5)
+            self.termos.append(t)
+
+    def calcular(self):
+        # limpar texto
+        self.res.config(state=tk.NORMAL)
+        self.res.delete('1.0', tk.END)
+        try:
+            A=[[int(e.get()) for e in row] for row in self.entries]
+            b=[int(t.get()) for t in self.termos]
+        except:
+            messagebox.showerror("Erro","Preencha todos os coeficientes.")
+            return
+        vars=['x','y','z']
+        # Mostrar equações iniciais
+        self.res.insert(tk.END,"Equações Digitadas:\n")
+        for i in range(3):
+            eq = " + ".join(f"{A[i][j]}{vars[j]}" for j in range(3)).replace("+ -","- ")
+            self.res.insert(tk.END, f"{eq} = {b[i]}\n")
+        # Escalonamento passo a passo
+        # L2 = L2 - L1
+        self.res.insert(tk.END,"\nPasso 1: L2 = L2 - L1\n")
+        for j in range(3): A[1][j] -= A[0][j]
+        b[1] -= b[0]
+        self.res.insert(tk.END, f"Nova L2: { ' + '.join(f'{A[1][j]}{vars[j]}' for j in range(3)).replace('+ -','- ')} = {b[1]}\n")
+        # L3 = L3 - 2·L1
+        self.res.insert(tk.END,"\nPasso 2: L3 = L3 - 2·L1\n")
+        for j in range(3): A[2][j] -= 2*A[0][j]
+        b[2] -= 2*b[0]
+        self.res.insert(tk.END, f"Nova L3: { ' + '.join(f'{A[2][j]}{vars[j]}' for j in range(3)).replace('+ -','- ')} = {b[2]}\n")
+        # L3 = L2 + L3 (correção)
+        self.res.insert(tk.END,"\nPasso 3: L3 = L2 + L3\n")
+        for j in range(3): A[2][j] += A[1][j]
+        b[2] += b[1]
+        self.res.insert(tk.END, f"Corrigida L3: { ' + '.join(f'{A[2][j]}{vars[j]}' for j in range(3)).replace('+ -','- ')} = {b[2]}\n")
+        # Mostrar matriz atualizada
+        self.res.insert(tk.END,"\nMatriz Atualizada (A | b):\n")
+        for i in range(3):
+            row_str = "[" + " ".join(f"{A[i][j]:>3}" for j in range(3)) + " |" + f" {b[i]:>3}" + "]\n"
+            self.res.insert(tk.END, row_str)
+        # Cálculo z, y, x com substituições
+        # z
+        coef_z, rhs_z = A[2][2], b[2]
+        val_z = rhs_z/coef_z
+        self.res.insert(tk.END, f"\nCálculo de z: {coef_z}z = {rhs_z} -> z = {rhs_z}/{coef_z} = {decimal_para_fracao(val_z)}\n")
+        # y
+        coef_y, coef_yz = A[1][1], A[1][2]
+        self.res.insert(tk.END, f"\nCálculo de y: {coef_y}y + {coef_yz}*({decimal_para_fracao(val_z)}) = {b[1]}\n")
+        rhs_y = b[1] - coef_yz*val_z
+        self.res.insert(tk.END, f"{coef_y}y = {rhs_y} -> y = {rhs_y}/{coef_y} = {decimal_para_fracao(rhs_y/coef_y)}\n")
+        # x
+        coef_x, coef_xy, coef_xz = A[0][0], A[0][1], A[0][2]
+        self.res.insert(tk.END, f"\nCálculo de x: {coef_x}x + {coef_xy}*({decimal_para_fracao(rhs_y/coef_y)}) + {coef_xz}*({decimal_para_fracao(val_z)}) = {b[0]}\n")
+        rhs_x = b[0] - coef_xy*(rhs_y/coef_y) - coef_xz*val_z
+        self.res.insert(tk.END, f"x = ({b[0]} - {coef_xy}*{decimal_para_fracao(rhs_y/coef_y)} - {coef_xz}*{decimal_para_fracao(val_z)})/{coef_x} = {decimal_para_fracao(rhs_x/coef_x)}\n")
+        # Solução final
+        self.res.insert(tk.END, "\nSolução final:\n")
+        self.res.insert(tk.END, f"x = {decimal_para_fracao(rhs_x/coef_x)}\n")
+        self.res.insert(tk.END, f"y = {decimal_para_fracao(rhs_y/coef_y)}\n")
+        self.res.insert(tk.END, f"z = {decimal_para_fracao(val_z)}\n")
+        self.res.config(state=tk.DISABLED)
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root=tk.Tk()
     App(root)
     root.mainloop()
