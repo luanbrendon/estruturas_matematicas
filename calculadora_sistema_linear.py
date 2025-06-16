@@ -114,7 +114,7 @@ class App:
     def __init__(self, root):
         # Inicializa a janela principal
         self.root = root
-        root.title("🔢 Solver de Sistema Linear")
+        root.title("🔢 Calculadora de Sistema Linear")
         root.geometry("950x650")
         root.configure(bg="#f0f4f7")
 
@@ -260,10 +260,6 @@ class App:
         # Instrução 5
         tk.Label(frame, text="5. Os passos do método de Eliminação de Gauss serão exibidos abaixo.",
                  font=("Arial", 11, "bold"), bg="#ffffff", fg="black").pack(anchor="w", pady=6)
-
-        # Dica
-        tk.Label(frame, text="💡 Dica: você pode usar vírgula ou ponto para números decimais.",
-                 font=("Arial", 11, "bold"), bg="#ffffff", fg="black").pack(anchor="w", pady=(20, 25))
 
         # Botão para fechar a janela de instruções
         canvas = tk.Canvas(frame, bg="#ffffff", highlightthickness=0)
