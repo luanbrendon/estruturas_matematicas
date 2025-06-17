@@ -61,6 +61,6 @@ A saída mostrará cada etapa da matriz transformada e os valores de x, y, z em 
 
 ## 🙋 Autores
 
-Desenvolvido por Guilherme Fernandes, Luan Brendon e Thro Camara
+Desenvolvido por Guilherme Fernandes, Luan Brendon e Thor Camara
 
 ---
